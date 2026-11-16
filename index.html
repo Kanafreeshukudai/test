@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yapon partikllari: mashqlar</title>
+<style>
+  :root { --navy:#1B3A5C; --ink:#22272E; --muted:#6B7280; --bg:#F4F6F9; --card:#FFFFFF;
+          --line:#D5DCE4; --ok:#2E7D4F; --okbg:#E6F4EC; --bad:#C9423F; --badbg:#FDECEC; --blank:#E8EEF7; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Carlito","Segoe UI","Helvetica Neue",Arial,sans-serif; font-size:16px; line-height:1.5; }
+  .wrap { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
+  header { background:var(--navy); color:#fff; border-radius:14px; padding:22px 24px; margin-bottom:18px; }
+  header h1 { margin:0 0 6px; font-size:24px; }
+  header p { margin:0; color:#D8E2EE; font-size:14.5px; }
+  .progress { display:flex; justify-content:space-between; align-items:center; margin:4px 2px 10px; color:var(--muted); font-size:14px; flex-wrap:wrap; gap:6px; }
+  .level { display:inline-block; background:var(--blank); color:var(--navy); border-radius:999px; padding:2px 10px; font-weight:bold; font-size:13px; }
+  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin-bottom:16px; }
+  .bar > div { height:100%; background:var(--navy); width:0; transition:width .3s; }
+  .card { background:var(--card); border-radius:14px; padding:26px 24px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .sentence { font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic","Meiryo","IPAPGothic",sans-serif; font-size:22px; line-height:2.1; margin:0 0 16px; }
+  .blank { display:inline-block; min-width:2.2em; text-align:center; border-bottom:2px solid var(--navy); background:var(--blank); border-radius:4px; padding:0 4px; margin:0 2px; }
+  .blank.filled { background:#fff; }
+  .blank.correct { border-color:var(--ok); background:var(--okbg); color:var(--ok); font-weight:bold; }
+  .blank.wrong { border-color:var(--bad); background:var(--badbg); color:var(--bad); font-weight:bold; }
+  .group { margin-bottom:12px; }
+  .group-label { font-size:13.5px; color:var(--muted); margin-bottom:6px; }
+  .opts { display:flex; flex-wrap:wrap; gap:8px; }
+  .opt { font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic","Meiryo","IPAPGothic",sans-serif; font-size:19px; min-width:58px; padding:8px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; }
+  .opt:hover:not(:disabled) { border-color:var(--navy); background:var(--blank); }
+  .opt.sel { border-color:var(--navy); background:var(--navy); color:#fff; }
+  .opt:disabled { cursor:default; }
+  .opt.correct { border-color:var(--ok); background:var(--okbg); color:var(--ok); font-weight:bold; }
+  .opt.wrong { border-color:var(--bad); background:var(--badbg); color:var(--bad); }
+  .actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  button.primary { background:var(--navy); color:#fff; border:0; border-radius:10px; padding:11px 22px; font-size:16px; cursor:pointer; }
+  button.primary:disabled { background:#AAB4C0; cursor:default; }
+  .feedback { display:none; border-radius:10px; padding:12px 14px; margin-top:14px; font-size:15px; }
+  .feedback.show { display:block; }
+  .feedback.ok { background:var(--okbg); color:#1E5A37; }
+  .feedback.bad { background:var(--badbg); color:#8A2D2A; }
+  .feedback strong { display:block; margin-bottom:6px; font-size:16px; }
+  .fb-full { margin:6px 0 8px; }
+  .fb-full .s { font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic","Meiryo","IPAPGothic",sans-serif; font-size:18px; }
+  .why { margin-top:6px; line-height:1.55; }
+  .result { text-align:center; padding:14px 6px; }
+  .result .score { font-size:46px; color:var(--navy); font-weight:bold; margin:8px 0; }
+  .result p { color:var(--muted); margin:4px 0 18px; }
+  .hint { color:var(--muted); font-size:13.5px; margin-top:14px; }
+  @media (max-width:480px) { .sentence { font-size:19px; } .opt { font-size:17px; min-width:52px; padding:7px 11px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Yapon partikllari: mashqlar</h1>
+    <p>Gapdagi bo'sh joylarga to'g'ri partikllarni tanlang. Hammasini tanlab, "Tekshirish" tugmasini bosing.</p>
+  </header>
+  <div class="progress"><span id="counter"></span><span id="score"></span></div>
+  <div class="bar"><div id="bar"></div></div>
+  <div class="card" id="app"></div>
+  <p class="hint">Mashqlar 3 bosqichda: avval 1 ta bo'shliqli gaplar, so'ng 2 ta, oxirida 3–4 ta bo'shliqli gaplar. Kanjisiz, faqat kana bilan yozilgan. Javoblar saqlanmaydi.</p>
+</div>
+
+<script>
+// Har bir bo'shliq uchun to'g'ri partikl va variantlar
+const PURPOSE = {
+  "は":"gap mavzusi (kim yoki nima haqida gapirilyapti)",
+  "が":"ega (kim yoki nima harakat qilyapti yoki holatda), yoki yoqtirish/tushunish kabi fe'llar bilan",
+  "を":"harakatning ob'ekti (nimaga qaratilgan)",
+  "に":"aniq nuqta, vaqt, kimga qaratilgan harakat yoki mavjudlik joyi",
+  "で":"harakat sodir bo'ladigan joy yoki vosita (nima bilan)",
+  "へ":"harakatning yo'nalishi (qayerga)",
+  "と":"birga bo'lgan kishi yoki ikki narsa o'rtasidagi 'va'",
+  "から":"boshlanish nuqtasi (qayerdan, qachondan)",
+  "まで":"tugash nuqtasi (qayergacha, qachongacha)",
+  "も":"'ham' ma'nosi",
+  "の":"egalik yoki tegishlilik",
+  "や":"ro'yxatdagi narsalardan biri ('va hokazo')"
+};
+
+// Sababli izohlar: "tanlangan|to'g'ri"
+const REASONS = {
+  "を|は": "を harakat ob'ektini bildiradi, lekin bu gapda gap mavzusi kerak.",
+  "は|を": "は mavzuni belgilaydi, lekin bu gapda harakatning ob'ekti kerak.",
+  "が|を": "が egani bildiradi. Bu gapda harakatning ob'ekti kerak.",
+  "を|が": "すき, わかります, ある kabi fe'l va sifatlar が bilan ishlatiladi. を bu yerda grammatik xato.",
+  "に|で": "に aniq nuqta yoki mavjudlik joyi uchun. Bu gapda harakat sodir bo'ladigan joy kerak, u で bilan belgilanadi.",
+  "で|に": "で harakat joyi yoki vosita uchun. Bu gapda mavjudlik yoki aniq nuqta kerak, harakat yo'q.",
+  "へ|に": "へ yo'nalishni bildiradi. Bu gapda aniq nuqta yoki kimga qaratilgan harakat kerak.",
+  "に|へ": "に aniq nuqta yoki kimga qaratilgan harakat uchun. Bu gapda yo'nalish kerak.",
+  "と|で": "と birga bo'lgan kishi yoki 'va' uchun. Bu gapda vosita yoki joy kerak.",
+  "で|と": "で vosita yoki joy uchun. Bu gapda birga bo'lgan kishi kerak.",
+  "で|へ": "で joy yoki vosita uchun. Bu gapda yo'nalish kerak.",
+  "へ|で": "へ yo'nalish uchun. Bu gapda harakat joyi yoki vosita kerak.",
+  "と|に": "と birgalikni bildiradi. Bu gapda aniq nuqta yoki kimga qaratilgan harakat kerak.",
+  "に|と": "に kimga qaratilgan yoki aniq nuqta uchun. Bu gapda birgalikda qilish kerak.",
+  "に|から": "に aniq nuqta uchun. Bu gapda boshlanish nuqtasi kerak.",
+  "から|まで": "から boshlanish nuqtasi uchun. Bu gapda tugash nuqtasi kerak.",
+  "まで|から": "まで tugash nuqtasi uchun. Bu gapda boshlanish nuqtasi kerak.",
+  "が|は": "が yangi ma'lumot yoki ega uchun. Bu gapda mavzu haqida gapirilyapti.",
+  "は|が": "は mavzu uchun. Bu fe'l yoki sifat egani (が) talab qiladi.",
+  "と|や": "と faqat ikki-uchta narsa uchun. Bu gapda ro'yxat ko'proq narsani o'z ichiga oladi.",
+  "も|は": "も 'ham' ma'nosini beradi. Bu gapda mavzu ko'rsatilgan.",
+  "は|も": "は mavzu uchun. Bu gapda 'ham' ma'nosi kerak.",
+  "の|は": "の egalik uchun. Bu gapda mavzu ko'rsatilishi kerak.",
+  "は|の": "は mavzu uchun. Bu gapda egalik ko'rsatilishi kerak.",
+  "を|に": "を ob'ekt uchun. Bu gapda kimga yoki qayerga qaratilganini bildirish kerak.",
+  "に|を": "に nuqta yoki kimga qaratilgan harakat uchun. Bu gapda ob'ekt kerak.",
+  "を|で": "を ob'ekt uchun. Bu gapda harakat sodir bo'ladigan joy yoki vosita kerak.",
+  "で|を": "で joy yoki vosita uchun. Bu gapda harakat ob'ekti kerak.",
+  "を|へ": "を ob'ekt uchun. Bu gapda yo'nalish kerak.",
+  "へ|を": "へ yo'nalish uchun. Bu gapda harakat ob'ekti kerak.",
+  "が|で": "が ega uchun. Bu gapda vosita yoki joy kerak.",
+  "で|が": "で vosita yoki joy uchun. Bu gapda ega kerak.",
+  "が|に": "が ega uchun. Bu gapda aniq nuqta kerak.",
+  "に|が": "に aniq nuqta uchun. Bu gapda ega kerak.",
+  "は|に": "は mavzu uchun. Bu gapda aniq nuqta yoki kimga qaratilgan harakat kerak.",
+  "に|は": "に aniq nuqta yoki kimga qaratilgan harakat uchun. Bu gapda mavzu kerak."
+};
+
+function reasonFor(chosen, correct) {
+  const r = REASONS[chosen + "|" + correct];
+  if (r) return r;
+  return `Bu o'rinda ${correct} kerak: ${PURPOSE[correct]}. ${chosen} esa ${PURPOSE[chosen]} uchun ishlatiladi, bu gapda bunday ma'no yo'q.`;
+}
+
+// Savollar. Bitta bo'shliq: single(gap, to'g'ri, variantlar, izoh)
+function single(s, a, o, e) { return { level: 1, s, a: [a], o: [o], e: [e] }; }
+// Ko'p bo'shliq: multi(gap, [to'g'ri...], [[variantlar1], [variantlar2], ...])
+function multi(s, a, o) { return { level: a.length, s, a, o, e: null }; }
+
+const singles = [
+  single("わたし＿がくせいです。", "は", ["は","が","を","に"], "Gapning mavzusi 'men'. Mavzu uchun は."),
+  single("ほん＿よみます。", "を", ["を","に","が","へ"], "Harakat qaratilgan narsa (ob'ekt): を."),
+  single("がっこう＿いきます。", "へ", ["へ","を","で","が"], "Harakat yo'nalishi: へ."),
+  single("なんじ＿おきますか。", "に", ["に","で","を","と"], "Aniq vaqt: に."),
+  single("ともだち＿えいがを みました。", "と", ["と","に","で","へ"], "Kishi bilan birga: と."),
+  single("ペン＿かきます。", "で", ["で","を","に","は"], "Vosita: で."),
+  single("へや＿ねこが います。", "に", ["に","で","を","は"], "Mavjudlik joyi: に. Bu yerda harakat yo'q."),
+  single("としょかん＿ほんを よみます。", "で", ["で","に","を","へ"], "Harakat sodir bo'ladigan joy: で."),
+  single("りんご＿すきです。", "が", ["が","を","は","に"], "すき (yoqadi) bilan が ishlatiladi."),
+  single("みず＿のみます。", "を", ["を","が","に","で"], "Ob'ekt: を."),
+];
+
+const doubles = [
+  multi("わたし＿がっこう＿いきます。", ["は","へ"], [["は","が","を","も"], ["へ","を","で","が"]]),
+  multi("わたし＿ともだち＿とうきょう＿いきました。", ["は","と","へ"], [["は","が","を","も"], ["と","に","で","を"], ["へ","を","で","が"]]),
+  multi("へや＿ねこ＿います。", ["に","が"], [["に","で","を","は"], ["が","を","は","に"]]),
+  multi("ペン＿ノート＿かきます。", ["で","を"], [["で","に","を","は"], ["を","が","に","で"]]),
+  multi("にほんご＿えいご＿はなします。", ["と","を"], [["と","を","で","が"], ["を","が","に","は"]]),
+  multi("くじ＿ごじ＿はたらきます。", ["から","まで"], [["から","まで","に","で"], ["まで","から","に","を"]]),
+  multi("わたし＿ともだち＿いっしょに いきます。", ["は","と"], [["は","が","も","を"], ["と","に","で","が"]]),
+  multi("ともだち＿てがみ＿かきます。", ["に","を"], [["に","と","で","へ"], ["を","が","に","で"]]),
+];
+
+const multis = [
+  multi("わたし＿あさ ろくじ＿ごはん＿たべます。", ["は","に","を"], [["は","が","も","を"], ["に","で","を","から"], ["を","が","に","と"]]),
+  multi("ともだち＿としょかん＿ほん＿よみます。", ["と","で","を"], [["と","に","で","が"], ["で","に","を","へ"], ["を","が","に","は"]]),
+  multi("わたし＿えき＿ともだち＿まちます。", ["は","で","を"], [["は","が","も","を"], ["で","に","を","へ"], ["を","が","に","と"]]),
+  multi("わたし＿うち＿がっこう＿あるきます。", ["は","から","まで"], [["は","が","も","を"], ["から","まで","に","で"], ["まで","から","に","を"]]),
+  multi("わたし＿ともだち＿とうきょう＿ひこうき＿いきました。", ["は","と","へ","で"], [["は","が","も","を"], ["と","に","で","が"], ["へ","を","で","が"], ["で","に","を","へ"]]),
+  multi("わたし＿にほんご＿がっこう＿べんきょうします。", ["は","を","で"], [["は","が","も","を"], ["を","が","に","は"], ["で","に","を","へ"]]),
+  multi("わたし＿ともだち＿あした とうきょう＿いきます。", ["は","と","へ"], [["は","が","も","を"], ["と","に","で","が"], ["へ","を","で","が"]]),
+  multi("わたし＿やまださん＿でんわ＿かけます。", ["は","に","を"], [["は","が","も","を"], ["に","で","を","から"], ["を","が","に","と"]]),
+  multi("きのう わたし＿がっこう＿ともだち＿あいました。", ["は","で","に"], [["は","が","も","を"], ["で","に","を","へ"], ["に","で","を","から"]]),
+  multi("わたし＿ほん＿ノート＿かいました。", ["は","と","を"], [["は","が","も","を"], ["と","に","で","が"], ["を","が","に","で"]]),
+];
+
+// Guruhlar tartibi: avval 1 talik, so'ng 2 talik, oxirida 3–4 talik
+const groups = [
+  { title: "1 talik", label: "1 ta bo'shliq", items: singles },
+  { title: "2 talik", label: "2 ta bo'shliq", items: doubles },
+  { title: "3–4 talik", label: "3–4 ta bo'shliq", items: multis },
+];
+const all = [];
+groups.forEach(g => g.items.forEach(it => all.push({ ...it, groupTitle: g.title })));
+
+let order = [];
+let idx = 0, score = 0, sel = [], checked = false;
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function start() {
+  // Har guruh ichida aralashtiriladi, guruhlar tartibi saqlanadi
+  order = [];
+  let offset = 0;
+  groups.forEach(g => {
+    const ids = shuffle(g.items.map((_, i) => offset + i));
+    order.push(...ids);
+    offset += g.items.length;
+  });
+  idx = 0; score = 0; render();
+}
+
+function sentenceHtml(it, chosen, state) {
+  const parts = it.s.split("＿");
+  let html = "";
+  parts.forEach((p, i) => {
+    html += p;
+    if (i < parts.length - 1) {
+      const val = chosen[i] || "&nbsp;";
+      let cls = "blank" + (chosen[i] ? " filled" : "");
+      if (state) cls = "blank " + (state[i] ? "correct" : "wrong");
+      html += `<span class="${cls}">${val}</span>`;
+    }
+  });
+  return html;
+}
+
+function render() {
+  const app = document.getElementById("app");
+  const total = all.length;
+  if (idx >= total) {
+    const pct = Math.round((score / total) * 100);
+    const msg = pct >= 90 ? "Ajoyib! Partikllarni yaxshi o'zlashtirdingiz." :
+                pct >= 70 ? "Yaxshi natija. Xato qilgan gaplarni qayta ko'rib chiqing." :
+                "Partikllarni yana bir bor takrorlang, so'ng qayta urinib ko'ring.";
+    document.getElementById("counter").textContent = "Tugadi";
+    document.getElementById("bar").style.width = "100%";
+    app.innerHTML = `<div class="result"><div>Natija</div><div class="score">${score} / ${total}</div><p>${msg}</p>
+      <button class="primary" onclick="start()">Qayta boshlash</button></div>`;
+    return;
+  }
+
+  const it = all[order[idx]];
+  const n = it.a.length;
+  sel = new Array(n).fill(null);
+  checked = false;
+  document.getElementById("counter").innerHTML = `Savol ${idx + 1} / ${total} <span class="level">${it.groupTitle}</span>`;
+  document.getElementById("score").textContent = `To'g'ri javoblar: ${score}`;
+  document.getElementById("bar").style.width = `${(idx / total) * 100}%`;
+
+  const groupsHtml = it.o.map((opts, i) => {
+    const shuffled = shuffle([...opts]);
+    const label = n === 1 ? "Bo'sh joyga partikl tanlang" : `${i + 1}-bo'sh joy`;
+    return `<div class="group" data-g="${i}">
+      <div class="group-label">${label}</div>
+      <div class="opts">${shuffled.map(o => `<button class="opt" data-g="${i}" data-v="${o}" onclick="pick(this)">${o}</button>`).join("")}</div>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="sentence" id="sent">${sentenceHtml(it, sel)}</div>
+    ${groupsHtml}
+    <div class="feedback" id="fb"></div>
+    <div class="actions">
+      <button class="primary" id="check" disabled onclick="check()">Tekshirish</button>
+      <button class="primary" id="next" style="display:none" onclick="next()">${idx + 1 === total ? "Natija" : "Keyingi"}</button>
+    </div>`;
+}
+
+function pick(btn) {
+  if (checked) return;
+  const g = +btn.dataset.g;
+  sel[g] = btn.dataset.v;
+  document.querySelectorAll(`.opt[data-g="${g}"]`).forEach(b => b.classList.toggle("sel", b === btn));
+  const it = all[order[idx]];
+  document.getElementById("sent").innerHTML = sentenceHtml(it, sel);
+  document.getElementById("check").disabled = sel.some(v => v === null);
+}
+
+function check() {
+  if (checked) return;
+  checked = true;
+  const it = all[order[idx]];
+  const n = it.a.length;
+  const state = it.a.map((c, i) => sel[i] === c);
+  const allOk = state.every(Boolean);
+  if (allOk) score++;
+
+  document.getElementById("sent").innerHTML = sentenceHtml(it, it.a, state);
+  // Variantlarni bo'yash
+  document.querySelectorAll(".opt").forEach(b => {
+    b.disabled = true;
+    const g = +b.dataset.g;
+    if (b.dataset.v === it.a[g]) b.classList.add("correct");
+    else if (b.dataset.v === sel[g]) b.classList.add("wrong");
+  });
+
+  const fb = document.getElementById("fb");
+  fb.className = "feedback show " + (allOk ? "ok" : "bad");
+  let html = `<strong>${allOk ? "Hammasi to'g'ri!" : "Ba'zi javoblar noto'g'ri."}</strong>`;
+  html += `<div class="fb-full">To'g'ri gap: <span class="s">${it.s.split("＿").map((p, i, arr) => p + (i < arr.length - 1 ? `<b style="color:#1E5A37">${it.a[i]}</b>` : "")).join("")}</span></div>`;
+  for (let i = 0; i < n; i++) {
+    const label = n === 1 ? "" : `${i + 1}-bo'sh joy: `;
+    if (state[i]) {
+      html += `<div class="why">✔ ${label}<b>${it.a[i]}</b> to'g'ri. Qoida: ${it.a[i]} uchun ${PURPOSE[it.a[i]]}.</div>`;
+    } else {
+      html += `<div class="why">✘ ${label}Siz <b>${sel[i]}</b> tanladingiz, to'g'risi <b>${it.a[i]}</b>. <b>Nega ${sel[i]} emas?</b> ${reasonFor(sel[i], it.a[i])} Qoida: ${it.a[i]} uchun ${PURPOSE[it.a[i]]}.</div>`;
+    }
+  }
+  if (it.e && n === 1) html += `<div class="why"><b>Izoh:</b> ${it.e[0]}</div>`;
+  fb.innerHTML = html;
+
+  document.getElementById("check").style.display = "none";
+  document.getElementById("next").style.display = "inline-block";
+  document.getElementById("score").textContent = `To'g'ri javoblar: ${score}`;
+}
+
+function next() { idx++; render(); }
+
+start();
+</script>
+</body>
+</html>
